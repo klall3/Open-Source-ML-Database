@@ -1,0 +1,1279 @@
+---
+title: "AirlinesDelay_Dataset"
+output:
+  html_document: default
+  word_document: default
+---
+
+# Exploratory Data Analysis: AirlinesDelay Dataset - Year 2008
+## Motivation
+### Through this exploratory data analysis, we wish to find hidden insights and trends from the airlines delay data and answer critical questions regarding delay and cancellation of flights. 
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dataset Description
+### The U.S. Department of Transportation's (DOT) Bureau of Transportation Statistics (BTS) tracks the on-time performance of domestic flights operated by large air carriers. Summary information on the number of on-time, delayed, canceled and diverted flights appears in DOT's monthly Air Travel Consumer Report, published about 30 days after the month's end, as well as in summary tables posted on this website. BTS began collecting details on the causes of flight delays in June 2003. Summary statistics and raw data are made available to the public at the time the Air Travel Consumer Report is released.
+
+### This version of the dataset was compiled from the Statistical Computing Statistical Graphics 2009 Data Expo.
+
+## Loading all the necessary libraries essential for the Exploratory Data Analysis (EDA)
+
+```{r}
+
+# For Data Manipulation
+library(dplyr)
+
+# For Tidying the messy data
+library(tidyr)
+
+# For Data Visualization
+library(ggplot2)
+
+```
+
+
+
+## Loading and summarizing the data
+### We are using two datasets, "DelayedFlights.csv" and "usairports.csv" for creating a comprehensive dataset containing all flight delay information along with longitude and latitude of the airports 
+
+```{r}
+
+airlines = read.csv("DelayedFlights.csv") # reading the airlines delay dataset
+airports = read.csv("usairports.csv")     # reading the us airports dataset 
+
+# Merging both airlines delay and us airports dataset into one dataset named "airlines"
+
+airlines <- merge(airlines, 
+                   airports, 
+                   by.x=c("Origin"), 
+                   by.y=c("locationID"))
+
+airlines <- merge(airlines, 
+                   airports, 
+                   by.x=c("Dest"), 
+                   by.y=c("locationID"),
+                   suffixes = c(".Origin",".Dest"))
+
+View(airlines)
+
+```
+
+
+## The Data-Set has the following predictors:
+
+### 1) Year 2008
+### 2) Month 1-12
+### 3) DayofMonth 1-31
+### 4) DayOfWeek 1 (Monday) - 7 (Sunday)
+### 5) DepTime actual departure time (local, hhmm)
+### 6) CRSDepTime scheduled departure time (local, hhmm)
+### 7) ArrTime actual arrival time (local, hhmm)
+### 8) CRSArrTime scheduled arrival time (local, hhmm)
+### 9) UniqueCarrier unique carrier code
+### 10) FlightNum flight number
+### 11) TailNum plane tail number: aircraft registration, unique aircraft identifier
+### 12) ActualElapsedTime in minutes
+### 13) CRSElapsedTime in minutes
+### 14) AirTime in minutes
+### 15) ArrDelay arrival delay, in minutes: A flight is counted as "on time" if it operated less than 15 minutes later the scheduled time shown in the carriers' Computerized Reservations Systems (CRS).
+### 16) DepDelay departure delay, in minutes
+### 17) Origin origin IATA airport code
+### 18) Dest destination IATA airport code
+### 19) Distance in miles
+### 20) TaxiIn taxi in time, in minutes
+### 21) TaxiOut taxi out time in minutes
+### 22) Cancelled was the flight cancelled
+### 23) CancellationCode reason for cancellation (A = carrier, B = weather, C = NAS, D = security)
+### 24) Diverted 1 = yes, 0 = no
+### 25) CarrierDelay in minutes: Carrier delay is within the control of the air carrier. Examples of occurrences that may determine carrier delay are: aircraft cleaning, aircraft damage, awaiting the arrival of connecting passengers or crew, baggage, bird strike, cargo loading, catering, computer, outage-carrier equipment, crew legality (pilot or attendant rest), damage by hazardous goods, engineering inspection, fueling, handling disabled passengers, late crew, lavatory servicing, maintenance, oversales, potable water servicing, removal of unruly passenger, slow boarding or seating, stowing carry-on baggage, weight and balance delays
+### 26) WeatherDelay in minutes: Weather delay is caused by extreme or hazardous weather conditions that are forecasted or manifest themselves on point of departure, enroute, or on point of arrival
+### 27) NASDelay in minutes: Delay that is within the control of the National Airspace System (NAS) may include: non-extreme weather conditions, airport operations, heavy traffic volume, air traffic control, etc
+### 28) SecurityDelay in minutes: Security delay is caused by evacuation of a terminal or concourse, re-boarding of aircraft because of security breach, inoperative screening equipment and/or long lines in excess of 29 minutes at screening areas
+### 29) LateAircraftDelay in minutes: Arrival delay at an airport due to the late arrival of the same aircraft at a previous airport. The ripple effect of an earlier delay at downstream airports is referred to as delay propagation
+### 30) Latitude.Origin: Latitude of airport from where flight is departing
+### 31) Longitude.Origin: Longitude of airport from where flight is departing
+### 32) Latitude.Dest: Latitude of airport from where flight is arriving
+### 33) Longitide.Dest: Longitude of airport from where flight is arriving
+
+
+
+## Analysing the structure of airlines Data-Set
+
+### As we can see below, the dataset consist of both the Quantitative(eg: DepTime, AirTime etc. ) and the Qualitative(UniqueCarrier, TailNumb etc.) predictors
+```{r}
+str(airlines)
+```
+
+
+## Checking unique value of certain predictors
+```{r}
+unique(airlines$Year)
+
+unique(airlines$UniqueCarrier)
+
+unique(airlines$CancellationCode)
+```
+
+
+### As the predictor X and Year are insignificant for our analysis, we can remove them
+```{r}
+airlines_subset = subset(airlines, select =c(-X, -Year)) # removing the predictors X and Year from the Dataset
+
+data = summary(airlines_subset) # summarizing the data  
+
+data
+```
+
+## Recoding the predictors
+### For better interpretation of values of few predictors, for instance the month, we recoded the numerical values to the actual names.  
+
+```{r}
+# converting the quantitaive predictors to qualitative
+airlines_subset$Month = as.factor(airlines_subset$Month) 
+airlines_subset$DayOfWeek = as.factor(airlines_subset$DayOfWeek)
+airlines_subset$DayofMonth = as.factor(airlines_subset$DayofMonth)
+
+airlines_subset$Month = recode(airlines_subset$Month,
+       "1" = "January",
+       "2" = "February",
+       "3" = "March",
+       "4" = "April",
+       "5" = "May",
+       "6" = "June",
+       "7" = "July",
+       "8" = "August",
+       "9" = "September",
+       "10" = "October",
+       "11" = "November",
+       "12" = "December")
+
+airlines_subset$DayOfWeek = recode(airlines_subset$DayOfWeek,
+                              "1" = "Monday",
+                              "2" = "Tuesday",
+                              "3" = "Wednesday",
+                              "4" = "Thursday",
+                              "5" = "Friday",
+                              "6" = "Saturday",
+                              "7" = "Sunday")
+
+airlines_subset$UniqueCarrier = recode(airlines_subset$UniqueCarrier,
+                                   "WN" = "South West",
+                                   "XE" = "ExpressJet",
+                                   "YV" = "Mesa",
+                                   "OH" = "Comair",
+                                   "OO" = "SkyWest",
+                                   "UA" = "United",
+                                   "US" = "US",
+                                   "DL" = "Delta", 
+                                   "EV" = "ExpressJet", 
+                                   "F9" = "Frontier",
+                                   "FL" = "AirTran",
+                                   "HA" = "Hawaiian",
+                                   "MQ" = "American Eagle", 
+                                   "NW" = "NorthWest",
+                                   "9E" = "Endeavor Air",
+                                   "AA" = "American",
+                                   "AQ" = "Aloha Air",
+                                   "AS" = "Alaska",
+                                   "B6" = "JetBlue",
+                                   "CO" = "Continental")
+
+airlines_subset$CancellationCode = recode(airlines_subset$CancellationCode,
+                                          "A" = "Carrier",
+                                          "B" = "Weather",
+                                          "C" = "NAS",
+                                          "D" = "Security")
+
+summary(airlines_subset)
+```
+
+## Data Analysis of Flights Delayed
+### Since the dataset consits of both delayed and cancelled flights, we separated the two for detailed analysis
+### For a delay to be actually considered as a delay, we only took the delays which were greater than or equal to 10 minutes. 
+
+```{r}
+
+airlines_delayed_raw <- airlines_subset %>%
+                        select(-CancellationCode) %>%
+                        filter(Cancelled == "0") %>% # filtering out delayed flights
+                        filter(ArrDelay >= 10) %>%   # filtering flights with arrival delay more than 10 minutes
+                        filter(DepDelay >= 10)       # filtering flights with departure delay more than 10 minutes
+                
+
+summary(airlines_delayed_raw)
+```
+
+```{r}
+airlines_delayed <- airlines_delayed_raw %>%
+                    drop_na() # removing rows with NA's
+
+summary(airlines_delayed)
+```
+
+## Distribution trend of predictors (Visualization type 1)
+
+```{r}
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$DepDelay)) +
+       xlim(0, 500) +
+       ggtitle("Histogram of Departure Delay")+
+       labs(x = "Departure Delay", y="Number of Flights")+
+       geom_density(color = "red")
+```
+
+## Distribution trend of predictors (Visualization type 2)
+
+```{r}
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$DepDelay)) +
+       geom_histogram(bins = 100, fill = "black") +
+       xlim(0, 500) +
+       ggtitle("Histogram of Departure Delay")+
+       labs(x = "Departure Delay", y="Number of Flights")
+       
+
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$ArrDelay)) +
+       geom_histogram(bins = 100, fill = "black") +
+       xlim(0,500) +
+       ggtitle("Histogram of Arrival Delay") +
+       labs(x = "Arrival Delay (in minutes)", y ="Number of Flights")
+
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$TaxiIn)) +
+       geom_histogram(bins = 100, fill = "black") +
+       xlim(0,100) +
+       ggtitle("Histogram of Taxi in") +
+       labs(x = "Taxi in (in minutes)", y ="Number of Flights")
+
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$TaxiOut)) +
+       geom_histogram(bins = 100, fill = "black") +
+       xlim(0,200) +
+       ggtitle("Histogram of Taxi out") +
+       labs(x = "Taxi out (in minutes)", y ="Number of Flights")
+
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$WeatherDelay)) +
+       geom_histogram(bins = 100, fill = "black") +
+       xlim(0,1000)+
+       ylim(0,25000)+
+       ggtitle("Histogram of Weather Delay") +
+       labs(x = "Weather Delay (in minutes)", y ="Number of Flights")
+
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$CarrierDelay)) +
+       geom_histogram(bins = 100, fill = "black") +
+       xlim(0,1000)+
+       ylim(0,200000)+
+       ggtitle("Histogram of Carrier Delay") +
+       labs(x = "Carrier Delay (in minutes)", y ="Number of Flights")
+
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$NASDelay)) +
+       geom_histogram(bins = 100, fill = "black") +
+       xlim(0,1000)+
+       ylim(0,200000)+
+       ggtitle("Histogram of NAS Delay") +
+       labs(x = "NAS Delay (in minutes)", y ="Number of Flights")
+
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$SecurityDelay)) +
+       geom_histogram(bins = 80, fill = "black") +
+       xlim(0,1000)+
+       ylim(0,2500)+
+       ggtitle("Histogram of Security Delay") +
+       labs(x = "Security Delay (in minutes)", y ="Number of Flights")
+
+ggplot(airlines_delayed, 
+       aes(airlines_delayed$LateAircraftDelay)) +
+       geom_histogram(bins = 100, fill = "black") +
+       xlim(0,1000)+
+       ylim(0,150000)+
+       ggtitle("Histogram of Late Aircraft Delay") +
+       labs(x = "Late Aircraft Delay (in minutes)", y ="Number of Flights")
+
+
+          
+```
+
+
+## Delay Trend by month
+### We would like to analyze the delay trend of the flights for each month. Here, we used median flight delay rather than mean flight delay as the data is highly skewed.  
+
+```{r}
+airlines_arrival_delay_byMonth <- airlines_delayed %>%
+                                  group_by(Month) %>% # grouping the data by month
+                                  summarize(median_arrival_delay = median(ArrDelay)) # calculating median arrival delay of all the flights
+
+airlines_departure_delay_byMonth <- airlines_delayed %>%
+                                    group_by(Month) %>% # grouping the data by month
+                                    summarize(median_departure_delay = median(DepDelay)) # calculating median departure delay of all the flights
+
+airlines_delayed_byMonth <- airlines_arrival_delay_byMonth %>% 
+                            inner_join(airlines_departure_delay_byMonth, # merging the arrival and departure data by month
+                                       by = c("Month"))
+
+airlines_delayed_byMonth
+
+# Changing the shape of the data for better interpretation and visualization
+
+tidy_airlines_delayed_byMonth <- airlines_delayed_byMonth %>%
+                                 gather(delay_type,            
+                                        median_delay_time, 
+                                        median_arrival_delay:median_departure_delay)
+
+tidy_airlines_delayed_byMonth
+
+# Visualizing the data using ggplot2 
+
+ggplot(tidy_airlines_delayed_byMonth, 
+       aes(x = tidy_airlines_delayed_byMonth$Month,
+           y = tidy_airlines_delayed_byMonth$median_delay_time, 
+           group = tidy_airlines_delayed_byMonth$delay_type, 
+           color = tidy_airlines_delayed_byMonth$delay_type)) + 
+           geom_line(size = 1) + 
+           geom_point(size = 2) +
+           theme(axis.text.x = element_text(angle = 90, vjust = .5))+
+           scale_x_discrete("Months") + 
+           scale_y_continuous("Median Delay Time (Minutes)") + 
+           scale_color_discrete("Delay Type")
+```
+
+### As we can see in the plot, the arrival delay and departure delay are highly correlated. Also, the delay is maximum during peak winter and peak summer months due to weather and summer holidays respectively
+
+
+## Delay Trend by Day of Week
+### We would like to analyze the delay trend of the flights for each day of week. Here, we used median flight delay rather than mean flight delay as the data is highly skewed.
+
+```{r}
+airlines_arrival_delay_by_DayOfWeek <- airlines_delayed %>%
+                                       group_by(DayOfWeek) %>% #grouping the Arrival Delay by day of week
+                                       summarize(median_arrival_delay = median(ArrDelay)) # calculating median Arrival Delay delay of all the flights
+
+airlines_departure_delay_by_DayOfWeek <- airlines_delayed %>%
+                                         group_by(DayOfWeek) %>% #grouping the Departure Delay by day of week
+                                         summarize(median_departure_delay = median(DepDelay)) # calculating median departure delay of all the flights
+
+airlines_delayed_by_DayOfWeek <- airlines_arrival_delay_by_DayOfWeek %>%
+                                 inner_join(airlines_departure_delay_by_DayOfWeek, # merging the arrival and departure data of week
+                                            by = c("DayOfWeek"))
+
+airlines_delayed_by_DayOfWeek
+
+# Changing the shape of the data for better interpretation and visualization
+
+tidy_airlines_delayed_by_DayOfWeek <- airlines_delayed_by_DayOfWeek %>%
+                                      gather(delay_type, 
+                                             median_delay_time, 
+                                             median_arrival_delay:median_departure_delay)
+
+tidy_airlines_delayed_by_DayOfWeek
+
+# Visualizing the data using ggplot2
+
+ggplot(tidy_airlines_delayed_by_DayOfWeek, 
+       aes(x = tidy_airlines_delayed_by_DayOfWeek$DayOfWeek,
+           y = tidy_airlines_delayed_by_DayOfWeek$median_delay_time, 
+           group = tidy_airlines_delayed_by_DayOfWeek$delay_type, 
+           color = tidy_airlines_delayed_by_DayOfWeek$delay_type)) + 
+           geom_line(size = 1) + 
+           geom_point(size = 2) +
+           theme(axis.text.x = element_text(angle = 90, vjust = .5))+
+           scale_x_discrete("Day Of Week") + 
+           scale_y_continuous("Median Delay Time (Minutes)") + 
+           scale_color_discrete("Delay Type")
+```
+
+### As we can see in the plot again, the arrival delay and departure delay are highly correlated. Also, the delay is maximum Saturdays and Mondays because most of the people are travelling on weekends and lowest in the middle of the week ie: Wednesday and Thursday.
+
+
+## Delay type trend based on Month
+
+```{r}
+airlines_CarrierDelay_byMonth <- airlines_delayed %>%
+                                 group_by(Month) %>% #grouping the carrier delay by month
+                                 summarize(median_CarrierDelay = median(CarrierDelay)) #calculating the median carrier delay for all flights
+
+airlines_WeatherDelay_byMonth <- airlines_delayed %>% #grouping the weather delay by month
+                                 group_by(Month) %>%
+                                 summarize(median_WeatherDelay = median(WeatherDelay))
+
+airlines_NASDelay_byMonth <- airlines_delayed %>% #grouping the NAS delay by month
+                             group_by(Month) %>%
+                             summarize(median_NASDelay = median(NASDelay))
+
+airlines_SecurityDelay_byMonth <- airlines_delayed %>% #grouping the security delay by month
+                                  group_by(Month) %>%
+                                  summarize(median_SecurityDelay = median(SecurityDelay))
+
+airlines_LateAircraftDelay_byMonth <- airlines_delayed %>% #grouping the late aircraft delay by month
+                                      group_by(Month) %>%
+                                      summarize(median_LateAircraftDelay = median(LateAircraftDelay))
+
+#merging all the type of delays
+airlines_delayed_byMonth_TypeOfDelay <- airlines_CarrierDelay_byMonth %>%
+                                        inner_join(airlines_WeatherDelay_byMonth,
+                                                   by = c("Month")) %>%
+                                        inner_join(airlines_NASDelay_byMonth,
+                                                   by = c("Month")) %>%
+                                        inner_join(airlines_SecurityDelay_byMonth,
+                                                   by = c("Month")) %>%
+                                        inner_join(airlines_LateAircraftDelay_byMonth,
+                                                   by = c("Month"))
+
+airlines_delayed_byMonth_TypeOfDelay
+
+# Changing the shape of the data for better interpretation and visualization
+tidy_airlines_delayed_byMonth_TypeOfDelay <- airlines_delayed_byMonth_TypeOfDelay %>%
+                                             gather(delay_type, 
+                                                    median_delay_time, 
+                                                    median_CarrierDelay:median_LateAircraftDelay)
+ 
+tidy_airlines_delayed_byMonth_TypeOfDelay
+
+# Visualizing the data using ggplot2
+ggplot(tidy_airlines_delayed_byMonth_TypeOfDelay, 
+       aes(x = tidy_airlines_delayed_byMonth_TypeOfDelay$Month,
+           y = tidy_airlines_delayed_byMonth_TypeOfDelay$median_delay_time, 
+           group = tidy_airlines_delayed_byMonth_TypeOfDelay$delay_type, 
+           color = tidy_airlines_delayed_byMonth_TypeOfDelay$delay_type)) + 
+           geom_line(size = 1) + 
+           geom_point(size = 2) +
+           theme(axis.text.x = element_text(angle = 90, vjust = .5))+
+           scale_x_discrete("Months") + 
+           scale_y_continuous("Median Delay Time (Minutes)") + 
+           scale_color_discrete("Delay Type")
+```
+
+## Delay type trend based on Day of Week
+
+```{r}
+
+airlines_CarrierDelay_by_DayOfWeek <- airlines_delayed %>%
+                                      group_by(DayOfWeek) %>%
+                                      summarize(median_CarrierDelay = median(CarrierDelay))
+
+airlines_WeatherDelay_by_DayOfWeek <- airlines_delayed %>%
+                                      group_by(DayOfWeek) %>%
+                                      summarize(median_WeatherDelay = median(WeatherDelay))
+
+airlines_NASDelay_by_DayOfWeek <- airlines_delayed %>%
+                                  group_by(DayOfWeek) %>%
+                                  summarize(median_NASDelay = median(NASDelay))
+
+airlines_SecurityDelay_by_DayOfWeek <- airlines_delayed %>%
+                                       group_by(DayOfWeek) %>%
+                                       summarize(median_SecurityDelay = median(SecurityDelay))
+
+airlines_LateAircraftDelay_by_DayOfWeek <- airlines_delayed %>%
+                                           group_by(DayOfWeek) %>%
+                                           summarize(median_LateAircraftDelay = median(LateAircraftDelay))
+
+airlines_delayed_by_DayOfWeek_TypeOfDelay <- airlines_CarrierDelay_by_DayOfWeek %>%
+                                             inner_join(airlines_WeatherDelay_by_DayOfWeek,
+                                                        by = c("DayOfWeek")) %>%
+                                             inner_join(airlines_NASDelay_by_DayOfWeek,
+                                                        by = c("DayOfWeek")) %>%
+                                             inner_join(airlines_SecurityDelay_by_DayOfWeek,
+                                                        by = c("DayOfWeek")) %>%
+                                             inner_join(airlines_LateAircraftDelay_by_DayOfWeek,
+                                                        by = c("DayOfWeek"))
+
+airlines_delayed_by_DayOfWeek_TypeOfDelay
+
+
+tidy_airlines_delayed_by_DayOfWeek_TypeOfDelay <- airlines_delayed_by_DayOfWeek_TypeOfDelay %>%
+                                                  gather(delay_type, 
+                                                         median_delay_time, 
+                                                         median_CarrierDelay:median_LateAircraftDelay)
+ 
+tidy_airlines_delayed_by_DayOfWeek_TypeOfDelay
+
+
+ggplot(tidy_airlines_delayed_by_DayOfWeek_TypeOfDelay, 
+       aes(x = tidy_airlines_delayed_by_DayOfWeek_TypeOfDelay$DayOfWeek,
+           y = tidy_airlines_delayed_by_DayOfWeek_TypeOfDelay$median_delay_time, 
+           group = tidy_airlines_delayed_by_DayOfWeek_TypeOfDelay$delay_type, 
+           color = tidy_airlines_delayed_by_DayOfWeek_TypeOfDelay$delay_type)) + 
+           geom_line(size = 1) + 
+           geom_point(size = 2) +
+           theme(axis.text.x = element_text(angle = 90, vjust = .5))+
+           scale_x_discrete("DayOfWeek") + 
+           scale_y_continuous("Median Delay Time (Minutes)") + 
+           scale_color_discrete("Delay Type")
+```
+
+
+Arrival Delay trend based on Unique Carrier
+
+```{r}
+
+airlines_arrival_delay_UniqueCarrier <- airlines_delayed %>%
+                                 group_by(UniqueCarrier) %>%
+                                 summarize(median_UniqueCarrier_delay = median(ArrDelay))%>%
+                                 ungroup() %>%    
+                                 arrange(desc(median_UniqueCarrier_delay))
+
+ggplot(airlines_arrival_delay_UniqueCarrier, 
+       aes(x = reorder(UniqueCarrier, -median_UniqueCarrier_delay), y= median_UniqueCarrier_delay)) + 
+       geom_bar(stat = "identity", 
+                fill = "blue", 
+                color = "red") + 
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) + 
+       scale_x_discrete("Airlines") + 
+       scale_y_continuous("Median Delay Time (Minutes)")
+
+```
+
+
+##Departure Delay trend based on Unique Carrier
+
+```{r}
+airlines_departure_delay_UniqueCarrier <- airlines_delayed %>%
+                                 group_by(UniqueCarrier) %>%
+                                 summarize(median_UniqueCarrier_delay = median(DepDelay))%>%
+                                 ungroup() %>%    
+                                 arrange(desc(median_UniqueCarrier_delay))
+
+ggplot(airlines_departure_delay_UniqueCarrier, 
+       aes(x = reorder(UniqueCarrier, -median_UniqueCarrier_delay), y= median_UniqueCarrier_delay)) + 
+       geom_bar(stat = "identity", 
+                fill = "blue", 
+                color = "red") + 
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) + 
+       scale_x_discrete("Airlines") + 
+       scale_y_continuous("Median Delay Time (Minutes)")
+
+```
+
+
+## Top 20 Airports with the maximum Arrival Delay (in minutes)
+
+```{r}
+airlines_ArrivalDelay_destination <- airlines_delayed %>%
+                                     group_by(Dest, Longitude.Dest, Latitude.Dest) %>%
+                                     summarize(median_Dest_arrival_delay = median(ArrDelay))%>%
+                                     ungroup()%>%
+                                     arrange(desc(median_Dest_arrival_delay))%>%
+                                     top_n(20)
+
+airlines_ArrivalDelay_destination
+
+
+```
+
+```{r}
+library(plotly)
+
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showland = TRUE,
+  landcolor = toRGB("gray85"),
+  subunitwidth = 1,
+  countrywidth = 1,
+  subunitcolor = toRGB("white"),
+  countrycolor = toRGB("white")
+)
+ p <- plot_geo(airlines_ArrivalDelay_destination, locationmode = 'USA-states', sizes = c(1, 250)) %>%
+  add_markers(
+    x = airlines_ArrivalDelay_destination$Longitude.Dest, y = airlines_ArrivalDelay_destination$Latitude.Dest, size = airlines_ArrivalDelay_destination$median_Dest_arrival_delay,color=airlines_ArrivalDelay_destination$median_Dest_arrival_delay, hoverinfo = "text",
+    text = paste(airlines_ArrivalDelay_destination$Dest)
+  )%>%
+   layout(title = "2008 US Airports with maximum median arrival delays", geo = g)
+ p
+
+```
+
+
+
+
+```{r}
+Median_ArrivalDelay_Destination_LMT <- airlines_delayed %>%
+                              filter(Dest == "LMT") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_ArrivalDelay_Destination_EWR <- airlines_delayed %>%
+                              filter(Dest == "EWR") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_ArrivalDelay_Destination_SPI <- airlines_delayed %>%
+                              filter(Dest == "SPI") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_ArrivalDelay_Destination_CIC <- airlines_delayed %>%
+                              filter(Dest == "CIC") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_ArrivalDelay_Destination_ACK <- airlines_delayed %>%
+                              filter(Dest == "ACK") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_ArrivalDelay_Destination_CMX <- airlines_delayed %>%
+                              filter(Dest == "CMX") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_ArrivalDelay_Destination_MCN <- airlines_delayed %>%
+                              filter(Dest == "MCN") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_ArrivalDelay_Destination_ORD <- airlines_delayed %>%
+                              filter(Dest == "ORD") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+
+
+
+
+ggplot(Median_ArrivalDelay_Destination_LMT, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Crater Lake - Klamath Regional Airport")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+
+ggplot(Median_ArrivalDelay_Destination_EWR, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Newark Liberty International Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+      
+
+ggplot(Median_ArrivalDelay_Destination_SPI, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Abraham Lincoln Capital Airport")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+       
+ggplot(Median_ArrivalDelay_Destination_CIC, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Chico Municipal Airport")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+       
+ggplot(Median_ArrivalDelay_Destination_ACK, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Nantucket Memorial Airport")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+
+ggplot(Median_ArrivalDelay_Destination_CMX, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Houghton County Memorial Airport")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+
+ggplot(Median_ArrivalDelay_Destination_MCN, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Middle Georgia Regional Airport")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+
+ggplot(Median_ArrivalDelay_Destination_ORD, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("O'Hare International Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+       
+
+
+```
+
+
+```{r}
+airlines_DepartureDelay_origin <- airlines_delayed %>%
+                                 group_by(Origin, Longitude.Origin, Latitude.Origin) %>%
+                                 summarize(median_Origin_departure_delay = median(DepDelay))%>%
+                                 ungroup() %>%    
+                                 arrange(desc(median_Origin_departure_delay))%>%
+                                 top_n(20)
+
+airlines_DepartureDelay_origin
+```
+
+```{r}
+library(plotly)
+
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showland = TRUE,
+  landcolor = toRGB("gray85"),
+  subunitwidth = 1,
+  countrywidth = 1,
+  subunitcolor = toRGB("white"),
+  countrycolor = toRGB("white")
+)
+ p <- plot_geo(airlines_DepartureDelay_origin, locationmode = 'USA-states', sizes = c(1, 250)) %>%
+  add_markers(
+    x = airlines_DepartureDelay_origin$Longitude.Origin, y = airlines_DepartureDelay_origin$Latitude.Origin, size = airlines_DepartureDelay_origin$median_Origin_departure_delay, color=airlines_DepartureDelay_origin$median_Origin_departure_delay, hoverinfo = "text",
+    text = paste(airlines_DepartureDelay_origin$Origin)
+  )%>%
+   layout(title = "2008 US Airports with maximum median Departure delays", geo = g)
+ p
+
+```
+
+```{r}
+Median_Delay_Destination_ACY <- airlines_delayed %>%
+                              filter(Dest == "ACY") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_Delay_Destination_PIR <- airlines_delayed %>%
+                              filter(Dest == "PIR") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_Delay_Destination_BJI <- airlines_delayed %>%
+                              filter(Dest == "BJI") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_Delay_Destination_SPI <- airlines_delayed %>%
+                              filter(Dest == "SPI") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+Median_Delay_Destination_CMX <- airlines_delayed %>%
+                              filter(Dest == "CMX") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = median(Delay))
+
+
+ggplot(Median_Delay_Destination_ACY, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Atlantic City International Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+      
+
+ggplot(Median_Delay_Destination_PIR, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Pierre Regional Airport")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+       
+ggplot(Median_Delay_Destination_BJI, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Bemidji Regional Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+       
+ggplot(Median_Delay_Destination_SPI, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Abraham Lincoln Capital Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+       
+ggplot(Median_Delay_Destination_CMX, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Houghton County Memorial Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Median Flight delay (Minutes)")
+```
+
+
+
+##Number of delays at an airport(as destination) based on month and delay type
+
+```{r}
+Num_Delays_Destination <- airlines_delayed %>%
+                                 group_by(Dest) %>%
+                                 summarize(Num_Delays_Dest = n())%>%
+                                 ungroup() %>%    
+                                 arrange(desc(Num_Delays_Dest))%>%
+                                 top_n(10)
+
+Num_Delays_Destination
+
+Num_Delays_Destination_ORD <- airlines_delayed %>%
+                              filter(Dest == "ORD") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              filter(Delay != "0")%>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = n())
+
+Num_Delays_Destination_ORD
+
+Num_Delays_Destination_ATL <- airlines_delayed %>%
+                                       filter(Dest == "ATL") %>%
+                                       gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                                       filter(Delay != "0")%>%
+                                       group_by(Month, Dest, delay_type)%>%
+                                       summarise(total = n())
+                                       
+Num_Delays_Destination_DFW <- airlines_delayed %>%
+                              filter(Dest == "DFW") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              filter(Delay != "0")%>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = n())
+             
+Num_Delays_Destination_EWR <- airlines_delayed %>%
+                              filter(Dest == "EWR") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              filter(Delay != "0")%>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = n())
+
+Num_Delays_Destination_DEN <- airlines_delayed %>%
+                              filter(Dest == "DEN") %>%
+                              gather(delay_type, Delay, CarrierDelay : LateAircraftDelay) %>%
+                              filter(Delay != "0")%>%
+                              group_by(Month, Dest, delay_type)%>%
+                              summarise(total = n())
+
+ggplot(Num_Delays_Destination_ORD, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("O'Hare International Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Number of Flights delayed")
+      
+
+ggplot(Num_Delays_Destination_ATL, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Hartsfield-Jackson Atlanta International Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Number of Flights delayed")
+       
+ggplot(Num_Delays_Destination_DFW, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Dallas/Fort Worth International Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Number of Flights delayed")
+       
+ggplot(Num_Delays_Destination_EWR, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Newark Liberty International Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Number of Flights delayed")
+       
+ggplot(Num_Delays_Destination_DEN, 
+       aes(Month, 
+           total, color = delay_type, group = delay_type)) + 
+       geom_line() +
+       geom_point()+
+       ggtitle("Denver International Airport Delay Trend")+
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) +
+       scale_x_discrete("Month")+
+       scale_y_continuous("Number of Flights delayed")
+
+```
+
+
+## Flights with maximum delay (in minutes)
+```{r}
+airlines_arrival_delay_FlightNum <- airlines_delayed %>%
+                                    group_by(FlightNum,UniqueCarrier, Origin, Dest) %>%
+                                    summarize(median_ArrivalDelay_FlightNum = median(ArrDelay))%>% # calculating median arrival delay 
+                                    ungroup()%>%
+                                    arrange(desc(median_ArrivalDelay_FlightNum))%>%
+                                    top_n(10) #Selecting the top 10 flight numbers having maximum median arrival delay (in minutes)
+
+airlines_arrival_delay_FlightNum
+```
+
+## Flights with maximum number of delays
+```{r}
+airlines_arrival_delay_FlightNum <- airlines_delayed %>%
+                                    group_by(FlightNum,UniqueCarrier, Origin, Dest) %>%
+                                    summarize(total = n())%>% #Calculating the total number of delays 
+                                    ungroup() %>%    
+                                    arrange(desc(total))%>%
+                                    top_n(10) #Selecting the top 10 flights having maximum number of delays
+
+airlines_arrival_delay_FlightNum
+```
+
+## Correlation of the Predictors causing the delay
+
+```{r}
+#Creating a Data Frame of predictors to find their correlation
+corr = data.frame(airlines_delayed$ArrDelay, 
+                         airlines_delayed$DepDelay, 
+                         airlines_delayed$TaxiIn, 
+                         airlines_delayed$TaxiOut, 
+                         airlines_delayed$CarrierDelay, 
+                         airlines_delayed$WeatherDelay, 
+                         airlines_delayed$NASDelay, 
+                         airlines_delayed$SecurityDelay, 
+                         airlines_delayed$LateAircraftDelay)
+
+correlation_dataframe_sample = corr[sample(nrow(corr), 100000), ]
+
+#Plotting the correlation matrix 
+library(corrplot)
+M <- cor(correlation_dataframe_sample)[1:9,1:9]
+colnames(M) <- c("ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "CarrDelay", "WeatherDelay", "NASDelay", "SecDelay", "LateArrDelay")
+rownames(M) <- c("ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "CarrDelay", "WeatherDelay", "NASDelay", "SecDelay", "LateArrDelay")
+corrplot(M, method = "number") 
+
+
+```
+
+
+
+
+
+## Exploratory Data Analysis of Flight Cancellation
+### Flight cancellation is always always inconvinient no matter what the reason is. However, it is important to explore the top reasons for flight cancellations.
+
+```{r}
+#Filtering out the data corresponding to the flights cancelled 
+airlines_cancelled <- airlines_subset %>%
+                      filter(Cancelled == "1")
+
+#Summarizing flight cancellation data
+summary(airlines_cancelled)
+
+```
+
+## Cancellation Trend based on Month and Cancellation Type
+### In this section, we explore the correlation between month of the year and the reason for flight cancellation. 
+
+```{r}
+# Calculating the average flight calcellation due to weather for each month
+weather_cancelled_byMonth <- airlines_cancelled %>%
+                             group_by(Month) %>%
+                             summarize(total = n(),
+                                       weather_cancelled = mean(CancellationCode == "Weather"))
+
+# Calculating the average flight calcellation due to carrier for each month
+carrier_cancelled_byMonth <- airlines_cancelled %>%
+                             group_by(Month) %>%
+                             summarize(total = n(), 
+                                       carrier_cancelled = mean(CancellationCode == "Carrier"))
+
+# Calculating the average flight calcellation due to NAS for each month
+NAS_cancelled_byMonth <- airlines_cancelled %>%
+                         group_by(Month) %>%
+                         summarize(total = n(), 
+                                   NAS_cancelled = mean(CancellationCode == "NAS"))
+
+# Combining all the three types of flight cancellation by month into a single dataset
+cancelled_byMonth <- weather_cancelled_byMonth %>%
+                     inner_join(carrier_cancelled_byMonth,
+                                by = c("Month")) %>%
+                     inner_join(NAS_cancelled_byMonth, 
+                                by = c("Month")) %>%
+                     select(-total.x, 
+                            -total.y, 
+                            -total)
+
+cancelled_byMonth
+
+# Re-structuring the data using tidyr
+tidy_cancelled_byMonth <- cancelled_byMonth %>%
+                          gather(cancelled_type, 
+                                 cancelled_percent, 
+                                 weather_cancelled:NAS_cancelled)
+
+tidy_cancelled_byMonth
+
+# Using ggplot to visualize the cancellation trend by month and cancellation type
+ggplot(tidy_cancelled_byMonth, 
+       aes(x = tidy_cancelled_byMonth$Month, 
+           y = tidy_cancelled_byMonth$cancelled_percent, 
+           group = tidy_cancelled_byMonth$cancelled_type, 
+           color = tidy_cancelled_byMonth$cancelled_type )) + 
+       geom_line(size = 1) + 
+       geom_point(size = 2) + 
+       scale_x_discrete("Months") + 
+       scale_y_continuous("Percentage of Flights Cancelled") + 
+       scale_color_discrete("Cancellation Type")
+```
+
+## Airlines with maximum number of flight cancellations (absolute vallues)
+```{r}
+# Sorting the airlines based on number of flight cancellations in decreasing order
+cancelled_airlines <- airlines_cancelled %>%
+                      select(Month, 
+                             UniqueCarrier, 
+                             CancellationCode) %>%
+                      group_by(UniqueCarrier) %>%
+                      summarize(total = n()) %>%
+                      ungroup() %>%    
+                      arrange(desc(total))
+
+
+cancelled_airlines
+
+# Visualizing the number of flights cancelled for each airline 
+ggplot(cancelled_airlines, 
+       aes(x = reorder(UniqueCarrier, -total), y= total)) + 
+       geom_bar(stat = "identity", 
+                fill = "red", 
+                color = "yellow") + 
+       theme(axis.text.x = element_text(angle = 90, vjust = .5)) + 
+       scale_x_discrete("Airlines") + 
+       scale_y_continuous("Number of Flights Cancelled")
+```
+
+## Number of flights cancelled based on Airlines and Cancellation Type
+### In this section we explore how different types of cancellation affect different airlines
+```{r}
+# Sorting the data based on airlines and cancellation code
+cancelled_airlines_bycode <- airlines_cancelled %>%
+                             select(Month, 
+                                    UniqueCarrier, 
+                                    CancellationCode) %>%
+                             group_by(UniqueCarrier, 
+                                      CancellationCode) %>%
+                             summarize(total = n())
+           
+cancelled_airlines_bycode
+
+# Visualizing the reasons of flight cancellation for different airlines
+ggplot(cancelled_airlines_bycode, 
+       aes(CancellationCode, 
+           total, 
+           fill = CancellationCode)) + 
+       geom_bar(stat = "identity") + 
+       facet_wrap(~UniqueCarrier) +
+       theme(axis.title.x=element_blank(), 
+             axis.ticks.x=element_blank(), 
+             axis.text.x=element_blank()) + 
+       scale_y_continuous("Number of Flights Cancelled")
+```
+
+## Number of flights cancelled based on Month for each Airlines
+### In this section we explore the distribution of flight cancellations accross the months for each airline
+```{r}
+# Sorting flight cancellations based on month and airlines
+cancelled_airlines_bymonth <- airlines_cancelled %>%
+                              select(Month, 
+                                     UniqueCarrier, 
+                                     CancellationCode) %>%
+                              group_by(UniqueCarrier, Month) %>%
+                              summarize(total = n())
+           
+cancelled_airlines_bymonth
+
+# Visualizing the distribution of flight cancellations accross the months for each airline
+ggplot(cancelled_airlines_bymonth, 
+       aes(Month, total, 
+           fill = Month)) + 
+       geom_bar(stat = "identity") + 
+       facet_wrap(~UniqueCarrier) +
+       theme(axis.title.x=element_blank(), 
+             axis.ticks.x=element_blank(), 
+             axis.text.x=element_blank()) + 
+       scale_y_continuous("Number of Flights Cancelled")
+```
+
+##Number of Flights Cancelled on each Day of Week based on Unique Carrier
+### In this section we explore the distribution of flight cancellations accross the week for each airline
+```{r}
+# Sorting flight cancellations based on day of week and airlines
+cancelled_airlines_by_dayofweek <- airlines_cancelled %>%
+                                   select(DayOfWeek, 
+                                          UniqueCarrier, 
+                                          CancellationCode) %>%
+                                   group_by(UniqueCarrier, 
+                                            DayOfWeek) %>%
+                                   summarize(total = n())
+
+cancelled_airlines_by_dayofweek
+
+# Visualizing the distribution of flight cancellations accross the week for each airline
+ggplot(cancelled_airlines_by_dayofweek, 
+       aes(DayOfWeek, 
+           total, 
+           fill = DayOfWeek)) + 
+       geom_bar(stat = "identity") + 
+       facet_wrap(~UniqueCarrier) +
+       theme(axis.title.x=element_blank(), 
+             axis.ticks.x=element_blank(), 
+             axis.text.x=element_blank()) + 
+       scale_y_continuous("Number of Flights Cancelled")
+```
+
+##Number of flights cancelled on each day of the week based on Cancellation Type
+## In this section, we explore the trend of flight cancellation based on the day of the week and type of cancellation
+```{r}
+# Sorting the number of flight cancelled based on the day of week and the cancellation code
+cancelled_airlines_by_dayofweek_with_CC <- airlines_cancelled %>%
+                                           select(DayOfWeek, 
+                                                  CancellationCode) %>%
+                                           group_by(DayOfWeek, 
+                                                    CancellationCode) %>%
+                                           summarize(total = n())
+
+cancelled_airlines_by_dayofweek_with_CC
+
+# Visualizing the trend of flights cancelled based on day of week and type of cancellation
+ggplot(cancelled_airlines_by_dayofweek_with_CC , 
+       aes(CancellationCode, 
+           total, 
+           fill = CancellationCode)) + 
+       geom_bar(stat = "identity") + 
+       facet_wrap(~DayOfWeek) +
+       theme(axis.title.x=element_blank(), 
+             axis.ticks.x=element_blank(), 
+             axis.text.x=element_blank()) + 
+       scale_y_continuous("Number of Flights Cancelled")
+```
+
+##Cancellation trend based on Day of Month and Cancellation Type
+### In this section we explore the relationship between day of month and type of cancellation
+```{r}
+# Sorting number of flight cancelled based on day of month and type of cancellation
+cancelled_airlines_by_dayofmonth_with_CC <- airlines_cancelled %>%
+                                            select(DayofMonth, 
+                                                   CancellationCode) %>%
+                                            group_by(CancellationCode, 
+                                                     DayofMonth) %>%
+                                            summarize(total = n())
+
+cancelled_airlines_by_dayofmonth_with_CC
+
+# Visualizing the relationship between the day of month and cancellation type 
+ggplot(cancelled_airlines_by_dayofmonth_with_CC , 
+       aes(DayofMonth, 
+           total, 
+           fill = CancellationCode)) + 
+       geom_bar(stat = "identity", 
+                color = "black") + 
+       facet_wrap(~CancellationCode) + 
+       scale_x_discrete("Day of Month",
+                        c(7,14,21,28)) + 
+       scale_y_continuous("Number of Flights Cancelled")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
